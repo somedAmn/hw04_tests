@@ -4,6 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from posts.models import Group, Post
+from yatube.settings import PAGINATOR_COUNT
 
 User = get_user_model()
 
@@ -23,19 +24,16 @@ class PostPagesTests(TestCase):
         )
         cls.post_without_group = Post.objects.create(
             text='test-text_without_group',
-            author=cls.author,
-            pk=1
+            author=cls.author
         )
         cls.post_with_group = Post.objects.create(
             text='test-text_with_group',
             author=cls.author,
-            group=cls.group,
-            pk=2
+            group=cls.group
         )
         cls.post_another_author = Post.objects.create(
             text='test-text_another_author',
-            author=cls.another_author,
-            pk=3
+            author=cls.another_author
         )
 
     def setUp(self):
@@ -47,17 +45,21 @@ class PostPagesTests(TestCase):
         templates_pages_names = {
             reverse('posts:index'): 'posts/index.html',
             reverse(
-                'posts:group_list', kwargs={'slug': 'test-slug'}
+                'posts:group_list',
+                kwargs={'slug': PostPagesTests.group.slug}
             ): 'posts/group_list.html',
             reverse(
-                'posts:profile', kwargs={'username': 'test-author'}
+                'posts:profile',
+                kwargs={'username': PostPagesTests.author.username}
             ): 'posts/profile.html',
             reverse(
-                'posts:post_detail', kwargs={'post_id': 1}
+                'posts:post_detail',
+                kwargs={'post_id': PostPagesTests.post_without_group.pk}
             ): 'posts/post_detail.html',
             reverse('posts:post_create'): 'posts/create_post.html',
             reverse(
-                'posts:post_edit', kwargs={'post_id': 1}
+                'posts:post_edit',
+                kwargs={'post_id': PostPagesTests.post_without_group.pk}
             ): 'posts/create_post.html'
         }
         for reverse_name, template in templates_pages_names.items():
@@ -69,31 +71,29 @@ class PostPagesTests(TestCase):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.author_client.get(reverse('posts:index'))
         first_object = response.context['page_obj'][0]
-        index_text_0 = first_object.text
-        index_author_0 = first_object.author
 
         self.assertIn(
-            index_text_0,
+            first_object.text,
             ['test-text_without_group', 'test-text_with_group',
                 'test-text_another_author']
         )
         self.assertIn(
-            index_author_0,
+            first_object.author,
             [self.author, self.another_author]
         )
 
     def test_group_list_page_show_correct_context(self):
         """Шаблон group_list сформирован с правильным контекстом."""
         response = self.author_client.get(
-            reverse('posts:group_list', kwargs={'slug': 'test-slug'})
+            reverse(
+                'posts:group_list', kwargs={'slug': PostPagesTests.group.slug}
+            )
         )
         group = response.context['group']
         first_object = response.context['page_obj'][0]
-        group_list_text_0 = first_object.text
-        group_list_author_0 = first_object.author
 
-        self.assertEqual(group_list_text_0, 'test-text_with_group')
-        self.assertEqual(group_list_author_0, self.author)
+        self.assertEqual(first_object.text, 'test-text_with_group')
+        self.assertEqual(first_object.author, self.author)
         self.assertEqual(group, self.group)
 
     def test_profile_page_show_correct_context(self):
@@ -101,17 +101,15 @@ class PostPagesTests(TestCase):
         response = self.author_client.get(
             reverse(
                 'posts:profile',
-                kwargs={'username': self.another_author.username}
+                kwargs={'username': PostPagesTests.another_author.username}
             )
         )
         first_object = response.context['page_obj'][0]
-        profile_text_0 = first_object.text
-        profile_author_0 = first_object.author
         profile = response.context['profile']
         post_count = response.context['post_count']
 
-        self.assertEqual(profile_text_0, 'test-text_another_author')
-        self.assertEqual(profile_author_0, self.another_author)
+        self.assertEqual(first_object.text, 'test-text_another_author')
+        self.assertEqual(first_object.author, self.another_author)
         self.assertEqual(profile, self.another_author)
         self.assertEqual(post_count, 1)
 
@@ -120,7 +118,7 @@ class PostPagesTests(TestCase):
         response = self.author_client.get(
             reverse(
                 'posts:post_detail',
-                kwargs={'post_id': '1'}
+                kwargs={'post_id': PostPagesTests.post_without_group.pk}
             )
         )
         post = response.context['post']
@@ -144,7 +142,10 @@ class PostPagesTests(TestCase):
     def test_post_edit_page_show_correct_context(self):
         """Шаблон post_edit сформирован с правильным контекстом."""
         response = self.author_client.get(
-            reverse('posts:post_edit', kwargs={'post_id': '1'})
+            reverse(
+                'posts:post_edit',
+                kwargs={'post_id': PostPagesTests.post_without_group.pk}
+            )
         )
         form_fields = {
             'text': forms.fields.CharField,
@@ -166,7 +167,7 @@ class PaginatorViewsTest(TestCase):
             slug='test-slug',
             description='test-description'
         )
-        for i in range(13):
+        for i in range(PAGINATOR_COUNT + 3):
             Post.objects.create(
                 text=f'test-text{i}',
                 author=cls.author,
@@ -179,7 +180,7 @@ class PaginatorViewsTest(TestCase):
 
     def test_index_first_page_contains_ten_records(self):
         response = self.client.get(reverse('posts:index'))
-        self.assertEqual(len(response.context['page_obj']), 10)
+        self.assertEqual(len(response.context['page_obj']), PAGINATOR_COUNT)
 
     def test_index_second_page_contains_three_records(self):
         response = self.client.get(reverse('posts:index') + '?page=2')
@@ -189,7 +190,7 @@ class PaginatorViewsTest(TestCase):
         response = self.client.get(
             reverse('posts:group_list', kwargs={'slug': 'test-slug'})
         )
-        self.assertEqual(len(response.context['page_obj']), 10)
+        self.assertEqual(len(response.context['page_obj']), PAGINATOR_COUNT)
 
     def test_group_list_second_page_contains_three_records(self):
         response = self.client.get(
@@ -203,16 +204,16 @@ class PaginatorViewsTest(TestCase):
         response = self.client.get(
             reverse(
                 'posts:profile',
-                kwargs={'username': self.author.username}
+                kwargs={'username': PaginatorViewsTest.author.username}
             )
         )
-        self.assertEqual(len(response.context['page_obj']), 10)
+        self.assertEqual(len(response.context['page_obj']), PAGINATOR_COUNT)
 
     def test_profile_second_page_contains_three_records(self):
         response = self.client.get(
             reverse(
                 'posts:profile',
-                kwargs={'username': self.author.username}
+                kwargs={'username': PaginatorViewsTest.author.username}
             ) + '?page=2'
         )
         self.assertEqual(len(response.context['page_obj']), 3)
