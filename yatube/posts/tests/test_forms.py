@@ -1,9 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from django.test import Client, TestCase
 from django.urls import reverse
-from django.shortcuts import get_object_or_404
 
-from posts.models import Post, Group
+from posts.models import Group, Post
 
 User = get_user_model()
 
@@ -37,7 +37,11 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        created_post = get_object_or_404(Post, text=form_data['text'], author=self.author)
+        created_post = get_object_or_404(
+            Post,
+            text=form_data['text'],
+            author=self.author
+        )
         self.assertEqual(created_post.text, form_data['text'])
         self.assertEqual(created_post.author, self.author)
 
