@@ -37,13 +37,9 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        created_post = get_object_or_404(
-            Post,
-            text=form_data['text'],
-            author=self.author
-        )
-        self.assertEqual(created_post.text, form_data['text'])
-        self.assertEqual(created_post.author, self.author)
+        last_created_post = Post.objects.order_by('-pk')[0]
+        self.assertEqual(last_created_post.text, form_data['text'])
+        self.assertEqual(last_created_post.author, self.author)
 
     def test_post_edit_author(self):
         form_data = {
@@ -65,13 +61,16 @@ class PostFormTests(TestCase):
         form_data = {
             'text': 'test-guest_text'
         }
+        count_before = Post.objects.count()
         self.client.post(
             reverse('posts:post_create'),
             data=form_data,
             follow=True
         )
+        count_after = Post.objects.count()
         post = Post.objects.filter(text=form_data['text'])
         self.assertFalse(post.exists())
+        self.assertEqual(count_before, count_after)
 
     def test_post_edit_guest_user(self):
         form_data = {
@@ -87,3 +86,36 @@ class PostFormTests(TestCase):
         )
         post = get_object_or_404(Post, pk=PostFormTests.post.pk)
         self.assertNotEqual(post.text, form_data['text'])
+
+    def test_post_with_group_create_authorized_user(self):
+        form_data = {
+            'text': 'test-create_text_with_group',
+            'group': PostFormTests.group.pk
+        }
+        self.author_client.post(
+            reverse('posts:post_create'),
+            data=form_data,
+            follow=True
+        )
+        last_created_post = Post.objects.order_by('-pk')[0]
+        self.assertEqual(last_created_post.text, form_data['text'])
+        self.assertEqual(last_created_post.author, self.author)
+        self.assertEqual(last_created_post.group, PostFormTests.group)
+
+    def test_post_with_group_edit_author(self):
+        form_data = {
+            'text': 'test-update_text_with_group',
+            'group': PostFormTests.group.pk
+        }
+        self.author_client.post(
+            reverse(
+                'posts:post_edit',
+                kwargs={'post_id': PostFormTests.post.pk}
+            ),
+            data=form_data,
+            follow=True
+        )
+        updated_post = get_object_or_404(Post, pk=PostFormTests.post.pk)
+        self.assertEqual(updated_post.text, form_data['text'])
+        self.assertEqual(updated_post.author, self.author)
+        self.assertEqual(updated_post.group, PostFormTests.group)

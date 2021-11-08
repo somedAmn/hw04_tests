@@ -74,8 +74,11 @@ class PostPagesTests(TestCase):
 
         self.assertIn(
             first_object.text,
-            ['test-text_without_group', 'test-text_with_group',
-                'test-text_another_author']
+            [
+                PostPagesTests.post_without_group.text,
+                PostPagesTests.post_with_group.text,
+                PostPagesTests.post_another_author.text
+            ]
         )
         self.assertIn(
             first_object.author,
@@ -92,7 +95,9 @@ class PostPagesTests(TestCase):
         group = response.context['group']
         first_object = response.context['page_obj'][0]
 
-        self.assertEqual(first_object.text, 'test-text_with_group')
+        self.assertEqual(
+            first_object.text, PostPagesTests.post_with_group.text
+        )
         self.assertEqual(first_object.author, self.author)
         self.assertEqual(group, self.group)
 
@@ -108,7 +113,9 @@ class PostPagesTests(TestCase):
         profile = response.context['profile']
         post_count = response.context['post_count']
 
-        self.assertEqual(first_object.text, 'test-text_another_author')
+        self.assertEqual(
+            first_object.text, PostPagesTests.post_another_author.text
+        )
         self.assertEqual(first_object.author, self.another_author)
         self.assertEqual(profile, self.another_author)
         self.assertEqual(post_count, 1)
@@ -188,14 +195,18 @@ class PaginatorViewsTest(TestCase):
 
     def test_group_list_first_page_contains_ten_records(self):
         response = self.client.get(
-            reverse('posts:group_list', kwargs={'slug': 'test-slug'})
+            reverse(
+                'posts:group_list',
+                kwargs={'slug': PaginatorViewsTest.group.slug}
+            )
         )
         self.assertEqual(len(response.context['page_obj']), PAGINATOR_COUNT)
 
     def test_group_list_second_page_contains_three_records(self):
         response = self.client.get(
             reverse(
-                'posts:group_list', kwargs={'slug': 'test-slug'}
+                'posts:group_list',
+                kwargs={'slug': PaginatorViewsTest.group.slug}
             ) + '?page=2'
         )
         self.assertEqual(len(response.context['page_obj']), 3)
