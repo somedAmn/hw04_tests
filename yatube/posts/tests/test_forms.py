@@ -100,7 +100,7 @@ class PostFormTests(TestCase):
         last_created_post = Post.objects.order_by('-pk')[0]
         self.assertEqual(last_created_post.text, form_data['text'])
         self.assertEqual(last_created_post.author, self.author)
-        self.assertEqual(last_created_post.group, PostFormTests.group)
+        self.assertEqual(last_created_post.group.pk, form_data['group'])
 
     def test_post_with_group_edit_author(self):
         form_data = {
@@ -118,4 +118,4 @@ class PostFormTests(TestCase):
         updated_post = get_object_or_404(Post, pk=PostFormTests.post.pk)
         self.assertEqual(updated_post.text, form_data['text'])
         self.assertEqual(updated_post.author, self.author)
-        self.assertEqual(updated_post.group, PostFormTests.group)
+        self.assertEqual(updated_post.group.pk, form_data['group'])
