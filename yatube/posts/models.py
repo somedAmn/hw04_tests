@@ -27,9 +27,42 @@ class Post(models.Model):
         blank=True,
         null=True
     )
+    image = models.ImageField(
+        'Картинка',
+        upload_to='posts/',
+        blank=True
+    )
+
+    class Meta:
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.text[:15]
 
-    class Meta:
-        ordering = ['-pub_date']
+
+class Comment(models.Model):
+    text = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='follower'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='following'
+    )
